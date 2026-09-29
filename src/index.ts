@@ -1,5 +1,9 @@
 import { type ServerAdapterModule } from "@paperclipai/adapter-utils";
 import { execute, testEnvironment } from "./server/index.js";
+import {
+  fetchAvailableModels,
+  DEFAULT_ANTIGRAVITY_MODELS,
+} from "./server/models.js";
 import type { AntigravityModelDefinition, AntigravityModelProfileDefinition } from "./types.js";
 
 export const type = "antigravity_local";
@@ -10,23 +14,15 @@ export const SANDBOX_INSTALL_COMMAND = "curl -sSL https://antigravity.google/ins
 
 export const DEFAULT_ANTIGRAVITY_LOCAL_MODEL = "auto";
 
-export const models: AntigravityModelDefinition[] = [
-  { id: DEFAULT_ANTIGRAVITY_LOCAL_MODEL, label: "Auto (Use global configured default)" },
-  { id: "gemini-3.5-flash", label: "Gemini 3.5 Flash (Medium)" },
-  { id: "gemini-3.1-pro-high", label: "Gemini 3.1 Pro (High)" },
-  { id: "gemini-3.1-pro-low", label: "Gemini 3.1 Pro (Low)" },
-  { id: "claude-sonnet-4.6-thinking", label: "Claude Sonnet 4.6 (Thinking)" },
-  { id: "claude-opus-4.6-thinking", label: "Claude Opus 4.6 (Thinking)" },
-  { id: "gpt-oss-120b", label: "GPT-OSS 120B (Medium)" },
-];
+export const models: AntigravityModelDefinition[] = [...DEFAULT_ANTIGRAVITY_MODELS];
 
 export const modelProfiles: AntigravityModelProfileDefinition[] = [
   {
     key: "cheap",
     label: "Cheap",
-    description: "Use Gemini 3.5 Flash for faster, cost-effective routing.",
+    description: "Use Gemini 3.8 Flash (Low) for faster, cost-effective routing.",
     adapterConfig: {
-      model: "gemini-3.5-flash",
+      model: "gemini-3.8-flash-low",
     },
     source: "adapter_default",
   },
@@ -66,6 +62,18 @@ export function createServerAdapter(): ServerAdapterModule {
     testEnvironment,
     models,
     modelProfiles,
+    listModels: async () => {
+      const fetched = await fetchAvailableModels();
+      models.length = 0;
+      models.push(...fetched);
+      return fetched;
+    },
+    refreshModels: async () => {
+      const refreshed = await fetchAvailableModels({ forceRefresh: true });
+      models.length = 0;
+      models.push(...refreshed);
+      return refreshed;
+    },
     supportsLocalAgentJwt: true,
     supportsInstructionsBundle: true,
     instructionsPathKey: "instructionsFilePath",
